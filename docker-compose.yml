@@ -1,0 +1,8 @@
+version: '3.4'
+
+services:
+  telegram-forward:
+    build: .
+    image: telegram-forward
+    env_file: 
+        - ./telegram-api.env
