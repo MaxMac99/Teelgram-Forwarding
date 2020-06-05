@@ -39,7 +39,7 @@ if __name__ == '__main__':
             'message': 'What is you API Hash?'
         })
     else:
-        phone = args.api_hash
+        api_hash = args.api_hash
     if args.api_id is None:
         api_question.append({
             'type': 'input',
@@ -47,7 +47,7 @@ if __name__ == '__main__':
             'message': 'What is you API ID?'
         })
     else:
-        phone = args.api_id
+        api_id = args.api_id
     
     print()
     if len(api_question):
