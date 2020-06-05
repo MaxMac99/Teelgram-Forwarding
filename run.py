@@ -1,7 +1,6 @@
 import os
 import sys
 import logging
-import regex
 import argparse
 from PyInquirer import prompt, Validator, ValidationError
 from telegram.client import Telegram
