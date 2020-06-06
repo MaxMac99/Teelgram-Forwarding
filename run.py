@@ -83,7 +83,7 @@ if __name__ == '__main__':
     for chat_id in chats:
         r = tg.get_chat(chat_id)
         r.wait()
-        chat_map[r.update['title']] = r.update
+        chat_map[r.update['title']] = r.update['id']
         chat_choices.append({
             'name': r.update['title']
         })
@@ -102,15 +102,22 @@ if __name__ == '__main__':
             'choices': chat_choices
         }
     ]
+    print()
     chat_answer = prompt(chat_question)
     
     source_chat_ids = []
+    source_chat_titles = ""
     for chat_id in chat_answer['source_chat_title']:
-        source_chat_ids.append(chat_map[chat_id]['id'])
+        source_chat_ids.append(chat_map[chat_id])
+        source_chat_titles += chat_id + ", "
     
     destination_chat_ids = []
+    destination_chat_titles = ""
     for chat_id in chat_answer['destination_chat_title']:
-        destination_chat_ids.append(chat_map[chat_id]['id'])
+        destination_chat_ids.append(chat_map[chat_id])
+        destination_chat_titles += chat_id + ", "
+    
+    print("Forwarding messages from", source_chat_titles[:-2], "to", destination_chat_titles[:-2])
 
     def message_handler(update):
         message = update['message']
@@ -123,7 +130,17 @@ if __name__ == '__main__':
 
             if message_text != '':
                 for dest_chat_id in destination_chat_ids:
-                    result = tg.send_message(dest_chat_id, message_text)
+                    result = tg.get_user(message['sender_user_id'])
+                    result.wait()
+
+                    name = f"{result.update['first_name']} {result.update['last_name']}"
+
+                    result = tg.get_chat(chat_id)
+                    result.wait()
+
+                    info = f"Neue Nachricht von {name} in \"{result.update['title']}\":\n{message_text}"
+
+                    result = tg.send_message(dest_chat_id, info)
                     result.wait()
                     if result.error:
                         print(f'send message error: {result.error_info}')
