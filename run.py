@@ -135,10 +135,7 @@ if __name__ == '__main__':
 
                     name = f"{result.update['first_name']} {result.update['last_name']}"
 
-                    result = tg.get_chat(chat_id)
-                    result.wait()
-
-                    info = f"Neue Nachricht von {name} in \"{result.update['title']}\":\n{message_text}"
+                    info = f"Neue Nachricht von {name}:\n{message_text}"
 
                     result = tg.send_message(dest_chat_id, info)
                     result.wait()
