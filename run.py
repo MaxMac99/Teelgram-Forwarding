@@ -133,9 +133,21 @@ if __name__ == '__main__':
                     result = tg.get_user(message['sender_user_id'])
                     result.wait()
 
-                    name = f"{result.update['first_name']} {result.update['last_name']}"
+                    name = None
+                    if result.update is not None:
+                        if 'first_name' in result.update and 'last_name' in result.update:
+                            name = f"{result.update['first_name']} {result.update['last_name']}"
+                        elif 'first_name' in result.update:
+                            name = f"{result.update['first_name']}"
+                        elif 'last_name' in result.update:
+                            name = f"{result.update['last_name']}"
+                        elif 'username' in result.update:
+                            name = f"{result.update['username']}"
 
-                    info = f"Neue Nachricht von {name}:\n{message_text}"
+                    if name is not None:
+                        info = f"Neue Nachricht von {name}:\n{message_text}"
+                    else:
+                        info = f"Neue Nachricht:\n{message_text}"
 
                     result = tg.send_message(dest_chat_id, info)
                     result.wait()
