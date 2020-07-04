@@ -27,10 +27,16 @@ destination_chat_ids = []
 
 with open('config.json') as config:
     data = json.load(config)
+    source_chat_titles = ""
     for chat in data['source']:
         source_chat_ids.append(chat['id'])
+        source_chat_titles += chat['name'] + ", "
+    destination_chat_titles = ""
     for chat in data['destination']:
         destination_chat_ids.append(chat['id'])
+        destination_chat_titles += chat['name'] + ", "
+
+    print("Forwarding messages from", source_chat_titles[:-2], "to", destination_chat_titles[:-2])
 
 
 @client.on(events.NewMessage())
