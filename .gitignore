@@ -178,3 +178,4 @@ cython_debug/
 
 telegram-api.env
 forwarding.session
+config.json

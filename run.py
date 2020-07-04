@@ -1,4 +1,5 @@
 import os
+import json
 import asyncio
 
 from telethon import TelegramClient, events
@@ -24,48 +25,12 @@ client = TelegramClient(SESSION, API_ID, API_HASH).start(PHONE, PASSWORD)
 source_chat_ids = []
 destination_chat_ids = []
 
-
-async def prepare():
-    dialogs = await client.get_dialogs()
-    chat_map = {}
-    chat_choices = []
-    for dialog in dialogs:
-        chat_map[dialog.title] = dialog
-        chat_choices.append({
-            'name': dialog.title
-        })
-    chat_question = [
-        {
-            'type': 'checkbox',
-            'name': 'source_chat_title',
-            'message': 'What chat would you like to copy from?',
-            'choices': chat_choices
-        },
-        {
-            'type': 'checkbox',
-            'name': 'destination_chat_title',
-            'message': 'What chat would you like to forward to?',
-            'choices': chat_choices
-        }
-    ]
-    print()
-    chat_answer = prompt(chat_question)
-    
-    global source_chat_ids
-    source_chat_ids = []
-    source_chat_titles = ""
-    for chat_id in chat_answer['source_chat_title']:
-        source_chat_ids.append(chat_map[chat_id].id)
-        source_chat_titles += chat_id + ", "
-    
-    global destination_chat_ids
-    destination_chat_ids = []
-    destination_chat_titles = ""
-    for chat_id in chat_answer['destination_chat_title']:
-        destination_chat_ids.append(chat_map[chat_id].id)
-        destination_chat_titles += chat_id + ", "
-    
-    print("Forwarding messages from", source_chat_titles[:-2], "to", destination_chat_titles[:-2])
+with open('config.json') as config:
+    data = json.load(config)
+    for chat in data['source']:
+        source_chat_ids.append(chat['id'])
+    for chat in data['destination']:
+        destination_chat_ids.append(chat['id'])
 
 
 @client.on(events.NewMessage())
@@ -93,7 +58,6 @@ async def message_handler(event):
 if __name__ == '__main__':
     try:
         print('(Press Ctrl+C to stop this)')
-        client.loop.run_until_complete(prepare())
         client.run_until_disconnected()
     finally:
         client.disconnect()

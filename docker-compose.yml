@@ -8,5 +8,6 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./forwarding.session:/app/forwarding.session
+      - ./config.json:/app/config.json
     env_file:
       - telegram-api.env
