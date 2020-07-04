@@ -1,93 +1,39 @@
 import os
-import sys
-import logging
-import argparse
+import asyncio
+
+from telethon import TelegramClient, events
 from PyInquirer import prompt, Validator, ValidationError
-from telegram.client import Telegram
+
+SESSION = "forwarding"
+API_ID = os.getenv('TELEGRAM_API_ID', None)
+API_HASH = os.getenv('TELEGRAM_API_HASH', None)
+PHONE = os.getenv('TELEGRAM_PHONE', None)
+PASSWORD = os.getenv('TELEGRAM_PASSWORD', None)
+
+if API_ID is None:
+    raise Exception("Could not find API ID in environment")
+
+if API_HASH is None:
+    raise Exception("Could not find API Hash in environment")
+
+if PHONE is None:
+    raise Exception("Could not find Phone number in environment")
+
+client = TelegramClient(SESSION, API_ID, API_HASH).start(PHONE, PASSWORD)
+
+source_chat_ids = []
+destination_chat_ids = []
 
 
-if __name__ == '__main__':
-    root = logging.getLogger()
-    root.setLevel(logging.ERROR)
-    ch = logging.StreamHandler(sys.stdout)
-    ch.setLevel(logging.ERROR)
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s')
-    ch.setFormatter(formatter)
-    root.addHandler(ch)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--api_id', help='API ID')
-    parser.add_argument('--api_hash', help='API Hash')
-    parser.add_argument('--phone', help='Your phone number')
-    args = parser.parse_args()
-
-    db_encryption_key = os.getenv("TELEGRAM_DB_ENCRYPTION_KEY", "IAmJustAKeyPleaseChangeMeNow")
-
-    api_question = []
-    if args.phone is None:
-        api_question.append({
-            'type': 'input',
-            'name': 'phone',
-            'message': 'What is you phone number?'
-        })
-    else:
-        phone = args.phone
-    if args.api_hash is None:
-        api_question.append({
-            'type': 'input',
-            'name': 'api_hash',
-            'message': 'What is you API Hash?'
-        })
-    else:
-        api_hash = args.api_hash
-    if args.api_id is None:
-        api_question.append({
-            'type': 'input',
-            'name': 'api_id',
-            'message': 'What is you API ID?'
-        })
-    else:
-        api_id = args.api_id
-    
-    print()
-    if len(api_question):
-        api_answer = prompt(api_question)
-        if 'api_id' in api_answer:
-            api_id = api_answer['api_id']
-        if 'api_hash' in api_answer:
-            api_hash = api_answer['api_hash']
-        if 'phone' in api_answer:
-            phone = api_answer['phone']
-
-    tg = Telegram(
-        api_id, api_hash, db_encryption_key, phone
-    )
-
-    tg.login()
-
-    result = tg.get_chats(9223372036854775807)
-    result.wait()
-
-    if result.error:
-        print(f'get chats error: {result.error_info}')
-
-    chats = result.update['chat_ids']
-
-    result = tg.get_me()
-    result.wait()
-
-    my_id = result.update['id']
-    
+async def prepare():
+    dialogs = await client.get_dialogs()
     chat_map = {}
     chat_choices = []
-    for chat_id in chats:
-        r = tg.get_chat(chat_id)
-        r.wait()
-        chat_map[r.update['title']] = r.update['id']
+    for dialog in dialogs:
+        chat_map[dialog.title] = dialog
         chat_choices.append({
-            'name': r.update['title']
+            'name': dialog.title
         })
-
     chat_question = [
         {
             'type': 'checkbox',
@@ -105,54 +51,49 @@ if __name__ == '__main__':
     print()
     chat_answer = prompt(chat_question)
     
+    global source_chat_ids
     source_chat_ids = []
     source_chat_titles = ""
     for chat_id in chat_answer['source_chat_title']:
-        source_chat_ids.append(chat_map[chat_id])
+        source_chat_ids.append(chat_map[chat_id].id)
         source_chat_titles += chat_id + ", "
     
+    global destination_chat_ids
     destination_chat_ids = []
     destination_chat_titles = ""
     for chat_id in chat_answer['destination_chat_title']:
-        destination_chat_ids.append(chat_map[chat_id])
+        destination_chat_ids.append(chat_map[chat_id].id)
         destination_chat_titles += chat_id + ", "
     
     print("Forwarding messages from", source_chat_titles[:-2], "to", destination_chat_titles[:-2])
 
-    def message_handler(update):
-        message = update['message']
-        chat_id = message['chat_id']
-        sender_id = message['sender_user_id']
 
-        if chat_id in source_chat_ids:
-            message_content = message['content']
-            message_text = message_content.get('text', {}).get('text', '')
+@client.on(events.NewMessage())
+async def message_handler(event):
+    if event.message.raw_text is not None and event.chat_id in source_chat_ids and not event.message.sender.is_self:
+        name = None
+        if event.message.sender.first_name is not None and event.message.sender.last_name is not None:
+            name = f"{event.message.sender.first_name} {event.message.sender.last_name}"
+        elif event.message.sender.first_name is not None:
+            name = f"{event.message.sender.first_name}"
+        elif event.message.sender.last_name is not None:
+            name = f"{event.message.sender.last_name}"
+        elif event.message.sender.username is not None:
+            name = f"{event.message.sender.username}"
+        
+        if name is not None:
+            info = f"Neue Nachricht von {name}:\n{event.message.raw_text}"
+        else:
+            info = f"Neue Nachricht:\n{event.message.raw_text}"
+        
+        for chat_id in destination_chat_ids:
+            await client.send_message(chat_id, info)
 
-            if message_text != '':
-                for dest_chat_id in destination_chat_ids:
-                    result = tg.get_user(message['sender_user_id'])
-                    result.wait()
 
-                    name = None
-                    if result.update is not None:
-                        if 'first_name' in result.update and 'last_name' in result.update:
-                            name = f"{result.update['first_name']} {result.update['last_name']}"
-                        elif 'first_name' in result.update:
-                            name = f"{result.update['first_name']}"
-                        elif 'last_name' in result.update:
-                            name = f"{result.update['last_name']}"
-                        elif 'username' in result.update:
-                            name = f"{result.update['username']}"
-
-                    if name is not None:
-                        info = f"Neue Nachricht von {name}:\n{message_text}"
-                    else:
-                        info = f"Neue Nachricht:\n{message_text}"
-
-                    result = tg.send_message(dest_chat_id, info)
-                    result.wait()
-                    if result.error:
-                        print(f'send message error: {result.error_info}')
-
-    tg.add_message_handler(message_handler)
-    tg.idle()
+if __name__ == '__main__':
+    try:
+        print('(Press Ctrl+C to stop this)')
+        client.loop.run_until_complete(prepare())
+        client.run_until_disconnected()
+    finally:
+        client.disconnect()

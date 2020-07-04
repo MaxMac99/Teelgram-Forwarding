@@ -1,4 +1,4 @@
-FROM python
+FROM python:latest
 
 # Keeps Python from generating .pyc files in the container
 ENV PYTHONDONTWRITEBYTECODE 1
