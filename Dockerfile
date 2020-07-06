@@ -1,3 +1,4 @@
+# For more information, please refer to https://aka.ms/vscode-docker-python
 FROM python:latest
 
 # Keeps Python from generating .pyc files in the container
@@ -13,5 +14,5 @@ RUN python -m pip install -r requirements.txt
 WORKDIR /app
 ADD . /app
 
-CMD [ "python", "run.py" ]
-ENTRYPOINT [ "python", "run.py" ]
+# During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
+CMD ["python", "run.py"]

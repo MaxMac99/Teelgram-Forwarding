@@ -20,26 +20,93 @@ if API_HASH is None:
 if PHONE is None:
     raise Exception("Could not find Phone number in environment")
 
-client = TelegramClient(SESSION, API_ID, API_HASH).start(PHONE, PASSWORD)
+client = TelegramClient("config/" + SESSION, API_ID, API_HASH).start(PHONE, PASSWORD)
 
-source_chat_ids = []
-destination_chat_ids = []
+source_chat_ids = {}
 
-with open('config.json') as config:
-    data = json.load(config)
-    source_chat_titles = ""
-    for chat in data['source']:
-        source_chat_ids.append(chat['id'])
-        source_chat_titles += chat['name'] + ", "
-    destination_chat_titles = ""
-    for chat in data['destination']:
-        destination_chat_ids.append(chat['id'])
-        destination_chat_titles += chat['name'] + ", "
-
-    print("Forwarding messages from", source_chat_titles[:-2], "to", destination_chat_titles[:-2])
+def print_chat_rules():
+    print("Forwarding messages")
+    for source_content in source_chat_ids:
+        destination_str = ""
+        for destination_content in source_chat_ids[source_content]['destinations']:
+            destination_str += destination_content['name'] + ", "
+        print(f"{source_chat_ids[source_content]['name']} to {destination_str[:-2]}")
 
 
-@client.on(events.NewMessage())
+async def prepare():
+    dialogs = await client.get_dialogs()
+    chat_map = {}
+    chat_choices = []
+    for dialog in dialogs:
+        chat_map[dialog.title] = dialog
+        chat_choices.append({
+            'name': dialog.title
+        })
+
+    if os.path.exists('config/config.json'):
+        with open('config/config.json') as config:
+            saved_config = json.load(config)
+            for chat in saved_config:
+                destinations = []
+                source_chat = chat_map[chat['name']]
+                for dest_chat in chat['destinations']:
+                    destinations.append({"name": chat_map[dest_chat].title, "id": chat_map[dest_chat].id})
+                source_chat_ids[source_chat.id] = {
+                    "id": source_chat.id,
+                    "name": source_chat.title,
+                    "destinations": destinations
+                }
+            print_chat_rules()
+    else:
+        destination_chat_choices = chat_choices.copy()
+        chat_choices.insert(0, "End")
+        chat_question_1 = [
+            {
+                'type': 'list',
+                'name': 'source_chat_title',
+                'message': 'What chat would you like to copy from?',
+                'choices': chat_choices
+            }
+        ]
+        chat_question_2 = [
+            {
+                'type': 'checkbox',
+                'name': 'destination_chat_title',
+                'message': 'What chat would you like to forward to?',
+                'choices': destination_chat_choices
+            }
+        ]
+        print()
+        saved_config = []
+        chat_answer_1 = prompt(chat_question_1)
+        while chat_answer_1['source_chat_title'] != "End":
+            chat = chat_map[chat_answer_1['source_chat_title']]
+            destinations = []
+            chat_answer_2 = prompt(chat_question_2)
+            for chat_id in chat_answer_2['destination_chat_title']:
+                dest_chat = chat_map[chat_id]
+                destinations.append({"name": dest_chat.title, "id": dest_chat.id})
+            source_chat_ids[chat.id] = {
+                "id": chat.id,
+                "name": chat.title,
+                "destinations": destinations
+            }
+            saved_config.append({
+                'name': chat.title,
+                'destinations': [dest['name'] for dest in destinations]
+            })
+            chat_answer_1 = prompt(chat_question_1)
+        
+        print_chat_rules()
+        with open('config/config.json', 'w') as config:
+            json.dump(saved_config, config)
+
+
+if __name__ == '__main__':
+    client.loop.run_until_complete(prepare())
+
+
+@client.on(events.NewMessage(chats=list(source_chat_ids.keys())))
 async def message_handler(event):
     if event.message.raw_text is not None and event.chat_id in source_chat_ids and not event.message.sender.is_self:
         name = None
@@ -57,8 +124,9 @@ async def message_handler(event):
         else:
             info = f"Neue Nachricht:\n{event.message.raw_text}"
         
-        for chat_id in destination_chat_ids:
-            await client.send_message(chat_id, info)
+        destinations = source_chat_ids[event.chat_id]['destinations']
+        for destination in destinations:
+            await client.send_message(destination['id'], info)
 
 
 if __name__ == '__main__':

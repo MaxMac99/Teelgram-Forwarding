@@ -1,13 +1,12 @@
 version: '3.4'
 
 services:
-  telegram:
-    image: telegram-forwarding
+  telegramforwarding:
+    image: telegramforwarding
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./forwarding.session:/app/forwarding.session
-      - ./config.json:/app/config.json
+      - ./config:/app/config
     env_file:
       - telegram-api.env

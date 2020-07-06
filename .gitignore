@@ -177,5 +177,4 @@ cython_debug/
 .history/
 
 telegram-api.env
-forwarding.session
-config.json
+config/*
