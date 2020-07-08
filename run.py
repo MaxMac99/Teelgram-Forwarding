@@ -108,25 +108,29 @@ if __name__ == '__main__':
 
 @client.on(events.NewMessage(chats=list(source_chat_ids.keys())))
 async def message_handler(event):
-    if event.message.raw_text is not None and event.chat_id in source_chat_ids and not event.message.sender.is_self:
-        name = None
-        if event.message.sender.first_name is not None and event.message.sender.last_name is not None:
-            name = f"{event.message.sender.first_name} {event.message.sender.last_name}"
-        elif event.message.sender.first_name is not None:
-            name = f"{event.message.sender.first_name}"
-        elif event.message.sender.last_name is not None:
-            name = f"{event.message.sender.last_name}"
-        elif event.message.sender.username is not None:
-            name = f"{event.message.sender.username}"
-        
-        if name is not None:
-            info = f"Neue Nachricht von {name}:\n{event.message.raw_text}"
-        else:
-            info = f"Neue Nachricht:\n{event.message.raw_text}"
-        
-        destinations = source_chat_ids[event.chat_id]['destinations']
-        for destination in destinations:
-            await client.send_message(destination['id'], info)
+    print("Received event: ", event)
+    try:
+        if event.message.raw_text is not None and event.chat_id in source_chat_ids:
+            name = None
+            if event.message.sender.first_name is not None and event.message.sender.last_name is not None:
+                name = f"{event.message.sender.first_name} {event.message.sender.last_name}"
+            elif event.message.sender.first_name is not None:
+                name = f"{event.message.sender.first_name}"
+            elif event.message.sender.last_name is not None:
+                name = f"{event.message.sender.last_name}"
+            elif event.message.sender.username is not None:
+                name = f"{event.message.sender.username}"
+            
+            if name is not None:
+                info = f"Neue Nachricht von {name}:\n{event.message.raw_text}"
+            else:
+                info = f"Neue Nachricht:\n{event.message.raw_text}"
+            
+            destinations = source_chat_ids[event.chat_id]['destinations']
+            for destination in destinations:
+                await client.send_message(destination['id'], info)
+    except Exception as e:
+        print(e)
 
 
 if __name__ == '__main__':
