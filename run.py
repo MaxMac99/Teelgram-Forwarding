@@ -112,13 +112,13 @@ async def message_handler(event):
     try:
         if event.message.raw_text is not None and event.chat_id in source_chat_ids:
             name = None
-            if event.message.sender.first_name is not None and event.message.sender.last_name is not None:
+            if hasattr(event.message.sender, 'first_name') and event.message.sender.first_name is not None and hasattr(event.message.sender, 'last_name') and event.message.sender.last_name is not None:
                 name = f"{event.message.sender.first_name} {event.message.sender.last_name}"
-            elif event.message.sender.first_name is not None:
+            elif hasattr(event.message.sender, 'first_name') and event.message.sender.first_name is not None:
                 name = f"{event.message.sender.first_name}"
-            elif event.message.sender.last_name is not None:
+            elif hasattr(event.message.sender, 'last_name') and event.message.sender.last_name is not None:
                 name = f"{event.message.sender.last_name}"
-            elif event.message.sender.username is not None:
+            elif hasattr(event.message.sender, 'username') and event.message.sender.username is not None:
                 name = f"{event.message.sender.username}"
             
             if name is not None:
