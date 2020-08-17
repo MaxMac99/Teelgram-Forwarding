@@ -108,7 +108,6 @@ if __name__ == '__main__':
 
 @client.on(events.NewMessage(chats=list(source_chat_ids.keys())))
 async def message_handler(event):
-    print("Received event: ", event)
     try:
         if event.message.raw_text is not None and event.chat_id in source_chat_ids:
             name = None
@@ -122,9 +121,9 @@ async def message_handler(event):
                 name = f"{event.message.sender.username}"
             
             if name is not None:
-                info = f"Neue Nachricht von {name}:\n{event.message.raw_text}"
+                info = f"<b>{name}</b>:\n{event.message.raw_text}"
             else:
-                info = f"Neue Nachricht:\n{event.message.raw_text}"
+                info = f"<b>Neue Nachricht</b>:\n{event.message.raw_text}"
             
             destinations = source_chat_ids[event.chat_id]['destinations']
             for destination in destinations:
