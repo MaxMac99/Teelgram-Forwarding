@@ -127,7 +127,7 @@ async def message_handler(event):
             
             destinations = source_chat_ids[event.chat_id]['destinations']
             for destination in destinations:
-                await client.send_message(destination['id'], info)
+                await client.send_message(destination['id'], info, parse_mode='html')
     except Exception as e:
         print(e)
 
