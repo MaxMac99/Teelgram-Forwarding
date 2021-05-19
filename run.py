@@ -36,11 +36,13 @@ def print_chat_rules():
 async def prepare():
     dialogs = await client.get_dialogs()
     chat_map = {}
+    chat_map_titles = {}
     chat_choices = []
     for dialog in dialogs:
-        chat_map[dialog.title] = dialog
+        chat_map[dialog.id] = dialog
+        chat_map_titles[dialog.name] = dialog.id
         chat_choices.append({
-            'name': dialog.title
+            'name': dialog.name
         })
 
     if os.path.exists('config/config.json'):
@@ -48,9 +50,9 @@ async def prepare():
             saved_config = json.load(config)
             for chat in saved_config:
                 destinations = []
-                source_chat = chat_map[chat['name']]
+                source_chat = chat_map[chat['id']]
                 for dest_chat in chat['destinations']:
-                    destinations.append({"name": chat_map[dest_chat].title, "id": chat_map[dest_chat].id})
+                    destinations.append({"name": chat_map[dest_chat['id']].title, "id": chat_map[dest_chat['id']].id})
                 source_chat_ids[source_chat.id] = {
                     "id": source_chat.id,
                     "name": source_chat.title,
@@ -80,11 +82,11 @@ async def prepare():
         saved_config = []
         chat_answer_1 = prompt(chat_question_1)
         while chat_answer_1['source_chat_title'] != "End":
-            chat = chat_map[chat_answer_1['source_chat_title']]
+            chat = chat_map[chat_map_titles[chat_answer_1['source_chat_title']]]
             destinations = []
             chat_answer_2 = prompt(chat_question_2)
             for chat_id in chat_answer_2['destination_chat_title']:
-                dest_chat = chat_map[chat_id]
+                dest_chat = chat_map[chat_map_titles[chat_id]]
                 destinations.append({"name": dest_chat.title, "id": dest_chat.id})
             source_chat_ids[chat.id] = {
                 "id": chat.id,
@@ -92,8 +94,9 @@ async def prepare():
                 "destinations": destinations
             }
             saved_config.append({
+                'id': chat.id,
                 'name': chat.title,
-                'destinations': [dest['name'] for dest in destinations]
+                'destinations': [{'id': dest['id'], 'name': dest['name']} for dest in destinations]
             })
             chat_answer_1 = prompt(chat_question_1)
         

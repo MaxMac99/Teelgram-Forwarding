@@ -3,10 +3,13 @@ version: '3.4'
 services:
   telegramforwarding:
     image: telegramforwarding
+    restart: always
     build:
       context: .
       dockerfile: Dockerfile
     volumes:
-      - ./config:/app/config
+      - "./config:/app/config"
     env_file:
       - telegram-api.env
+    stdin_open: true
+    tty: true
